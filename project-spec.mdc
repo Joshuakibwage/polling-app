@@ -1,0 +1,83 @@
+---
+description: Core conventions, architectural principles, and coding standards for the Polling App with QR Code Sharing project.
+globs:
+alwaysApply: true
+---
+
+## Project Overview
+This document defines the rules and conventions for building and maintaining the **Polling App with QR Code Sharing**. The application enables users to register, create polls, and share them via unique links or QR codes for others to vote on.  
+
+All contributors must adhere to these standards to ensure **consistency, maintainability, and scalability** across the codebase.
+
+---
+
+## Technology Stack
+The project uses the following stack. Do not introduce new libraries or frameworks unless explicitly approved.
+
+- **Language:** TypeScript  
+- **Framework:** Next.js (App Router)  
+- **Database & Auth:** Supabase  
+- **Styling:** Tailwind CSS with `shadcn/ui` components  
+- **State Management:**  
+  - Default: Server Components for server state  
+  - Local: `useState` or `useReducer` in Client Components only  
+- **API Communication:**  
+  - Server Actions for all mutations (poll creation, voting)  
+  - Server Components for data fetching (Supabase client)  
+- **Utility Libraries:** `qrcode.react` for QR code generation  
+
+---
+
+## Architecture & Code Style
+
+### Directory Structure
+Follow the standard Next.js App Router convention:  
+- `/app` → routes and pages  
+- `/components/ui` → `shadcn/ui` components  
+- `/components` → custom reusable components  
+- `/lib` → Supabase client setup, utility functions, Server Actions  
+
+### Components
+- **Server Components:** Preferred for fetching and rendering data.  
+- **Client Components:** Use only when interactivity (hooks, event listeners, local state) is required.  
+
+### Naming Conventions
+- **Components:** PascalCase → `CreatePollForm.tsx`  
+- **Utilities & Server Actions:** camelCase → `submitVote.ts`  
+
+### Error Handling
+- Wrap mutations and queries in `try/catch` blocks.  
+- Use Next.js `error.tsx` files for segment-level error boundaries.  
+
+### Security & Secrets
+- Never hardcode API keys or secrets.  
+- Use `.env.local` for environment variables:  
+  - `NEXT_PUBLIC_SUPABASE_URL`  
+  - `SUPABASE_SERVICE_ROLE_KEY` (server-only)  
+
+---
+
+## Code Patterns
+
+✅ **Do this:**  
+- Submit forms via **Server Actions** (keeps client JS minimal).  
+- Fetch data directly in **Server Components**.  
+- Reuse UI elements through `shadcn/ui` or custom components.  
+
+❌ **Do not do this:**  
+- Do not create custom API routes for form submissions if a Server Action suffices.  
+- Do not fetch data on the client with `useEffect`/`useState` in page components.  
+
+---
+
+## Verification Checklist
+Before merging or finalizing any code, verify the following:  
+
+- [ ] Next.js App Router is used correctly.  
+- [ ] Server Components handle data fetching.  
+- [ ] Server Actions handle all mutations.  
+- [ ] Supabase client is used for every DB/auth interaction.  
+- [ ] `shadcn/ui` is used for UI consistency.  
+- [ ] Environment variables are used for secrets—nothing hardcoded.  
+
+---
