@@ -1,13 +1,21 @@
+'use client'
+
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { User, LogOut, Settings, Plus } from "lucide-react"
+import { useAuth } from "@/app/providers/auth-provider"
 
 export default function Header() {
-  // Mock user state - replace with actual auth state
-  const isAuthenticated = false
-  const user = { name: "John Doe", email: "john@example.com" }
+  const { user, loading, signOut } = useAuth()
+  const isAuthenticated = !!user
+  const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'User'
+  const userEmail = user?.email || ''
+
+  const handleSignOut = async () => {
+    await signOut()
+  }
 
   return (
     <header className="border-b bg-white">
@@ -27,7 +35,9 @@ export default function Header() {
           </nav>
           
           <div className="flex items-center space-x-4">
-            {isAuthenticated ? (
+            {loading ? (
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+            ) : isAuthenticated ? (
               <>
                 <Link href="/polls/create">
                   <Button size="sm" className="hidden md:flex">
@@ -40,17 +50,17 @@ export default function Header() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src="/avatars/01.png" alt={user.name} />
-                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src="/avatars/01.png" alt={userName} />
+                        <AvatarFallback>{userName.charAt(0)}</AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.name}</p>
+                        <p className="text-sm font-medium leading-none">{userName}</p>
                         <p className="text-xs leading-none text-muted-foreground">
-                          {user.email}
+                          {userEmail}
                         </p>
                       </div>
                     </DropdownMenuLabel>
@@ -64,7 +74,7 @@ export default function Header() {
                       <span>Settings</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleSignOut}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
                     </DropdownMenuItem>
