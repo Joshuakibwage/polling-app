@@ -1,77 +1,139 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import Link from "next/link"
+import { notFound } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import { db } from '@/lib/database';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Calendar, User, Eye, MessageSquare } from 'lucide-react';
 
-// Mock data - replace with actual data fetching
-const mockPoll = {
-  id: "1",
-  title: "What's your favorite programming language?",
-  description: "A survey to understand developer preferences and help guide our technology choices for future projects.",
-  totalVotes: 156,
-  status: "active",
-  createdAt: "2024-01-15",
-  options: [
-    { id: "1", text: "JavaScript", votes: 45, percentage: 28.8 },
-    { id: "2", text: "Python", votes: 38, percentage: 24.4 },
-    { id: "3", text: "TypeScript", votes: 32, percentage: 20.5 },
-    { id: "4", text: "Rust", votes: 25, percentage: 16.0 },
-    { id: "5", text: "Go", votes: 16, percentage: 10.3 }
-  ]
+interface PollPageProps {
+  params: {
+    id: string;
+  };
 }
 
-export default function PollDetailPage({ params }: { params: { id: string } }) {
+export default async function PollPage({ params }: PollPageProps) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const poll = await db.getPoll(params.id);
+
+  if (!poll) {
+    notFound();
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   return (
     <div className="container mx-auto py-8 max-w-4xl">
-      <div className="mb-6">
-        <Link href="/polls">
-          <Button variant="outline" className="mb-4">
-            ← Back to Polls
-          </Button>
-        </Link>
-        
+      <div className="space-y-6">
+        {/* Poll Header */}
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="text-2xl mb-2">{mockPoll.title}</CardTitle>
-                <CardDescription className="text-lg">
-                  {mockPoll.description}
-                </CardDescription>
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <CardTitle className="text-2xl">{poll.title}</CardTitle>
+                {poll.description && (
+                  <CardDescription className="text-base">
+                    {poll.description}
+                  </CardDescription>
+                )}
               </div>
-              <Badge variant={mockPoll.status === "active" ? "default" : "secondary"}>
-                {mockPoll.status}
-              </Badge>
-            </div>
-            <div className="text-sm text-gray-600">
-              Created on {mockPoll.createdAt} • {mockPoll.totalVotes} total votes
+              {poll.category && (
+                <Badge variant="secondary">{poll.category}</Badge>
+              )}
             </div>
           </CardHeader>
-          
-          <CardContent className="space-y-4">
+          <CardContent>
+            <div className="flex items-center gap-6 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                <span>Created by {poll.created_by}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <span>{formatDate(poll.created_at)}</span>
+              </div>
+              {poll.expires_at && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>Expires {formatDate(poll.expires_at)}</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Poll Options */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Poll Options
+            </CardTitle>
+            <CardDescription>
+              {poll.allow_multiple_votes 
+                ? "You can vote for multiple options" 
+                : "Select one option to vote"
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-3">
-              {mockPoll.options.map((option) => (
-                <div key={option.id} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">{option.text}</span>
-                    <span className="text-sm text-gray-600">
-                      {option.votes} votes ({option.percentage}%)
-                    </span>
+              {poll.options.map((option, index) => (
+                <div key={option.id} className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50">
+                  <div className="flex-1">
+                    <span className="font-medium">{option.option_text}</span>
                   </div>
-                  <Progress value={option.percentage} className="h-2" />
+                  <Button variant="outline" size="sm">
+                    Vote
+                  </Button>
                 </div>
               ))}
             </div>
-            
-            <div className="pt-4 border-t">
-              <Button className="w-full" size="lg">
-                Vote Now
-              </Button>
+          </CardContent>
+        </Card>
+
+        {/* Poll Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Poll Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Visibility:</span>
+                <Badge variant={poll.is_public ? "default" : "secondary"}>
+                  {poll.is_public ? "Public" : "Private"}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Status:</span>
+                <Badge variant={poll.is_active ? "default" : "secondary"}>
+                  {poll.is_active ? "Active" : "Inactive"}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Voting:</span>
+                <Badge variant={poll.allow_multiple_votes ? "default" : "secondary"}>
+                  {poll.allow_multiple_votes ? "Multiple votes allowed" : "Single vote only"}
+                </Badge>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
-  )
+  );
 }

@@ -1,75 +1,95 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createPollSchema } from '@/lib/validations/poll'
-
-// Mock data - replace with actual database calls
-let polls = [
-  {
-    id: "1",
-    title: "What's your favorite programming language?",
-    description: "A survey to understand developer preferences",
-    options: [
-      { id: "1", text: "JavaScript", votes: 45, percentage: 28.8 },
-      { id: "2", text: "Python", votes: 38, percentage: 24.4 },
-      { id: "3", text: "TypeScript", votes: 32, percentage: 20.5 },
-      { id: "4", text: "Rust", votes: 25, percentage: 16.0 },
-      { id: "5", text: "Go", votes: 16, percentage: 10.3 }
-    ],
-    totalVotes: 156,
-    status: "active",
-    createdAt: "2024-01-15",
-    updatedAt: "2024-01-15",
-    createdBy: "user1",
-    isPublic: true,
-    allowMultipleVotes: false
-  }
-]
-
-export async function GET() {
-  try {
-    return NextResponse.json({ polls })
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to fetch polls' },
-      { status: 500 }
-    )
-  }
-}
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { db } from "@/lib/database";
+import { createPollSchema } from "@/lib/validations/poll";
+import { z } from "zod";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const validatedData = createPollSchema.parse(body)
-    
-    // Create new poll with generated ID
-    const newPoll = {
-      id: Date.now().toString(),
-      ...validatedData,
-      options: validatedData.options.map((text, index) => ({
-        id: (index + 1).toString(),
-        text,
-        votes: 0,
-        percentage: 0
-      })),
-      totalVotes: 0,
-      status: "active",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: "user1" // Replace with actual user ID from auth
+    const supabase = createClient();
+
+    // Get the current user
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      console.error("Auth error:", authError);
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    
-    polls.push(newPoll)
-    
-    return NextResponse.json(newPoll, { status: 201 })
-  } catch (error) {
-    if (error instanceof Error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      )
-    }
+
+    // Parse and validate the request body
+    const body = await request.json();
+    console.log("Request body:", body);
+
+    const validatedData = createPollSchema.parse(body);
+    console.log("Validated data:", validatedData);
+
+    // Create the poll
+    const poll = await db.createPoll(validatedData, user.id);
+    console.log("Created poll:", poll);
+
     return NextResponse.json(
-      { error: 'Failed to create poll' },
-      { status: 500 }
-    )
+      {
+        success: true,
+        poll,
+        message: "Poll created successfully!",
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Error creating poll:", error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: error.errors,
+        },
+        { status: 400 },
+      );
+    }
+
+    // Return more detailed error information
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json(
+      {
+        error: "Failed to create poll",
+        details: errorMessage,
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const offset = parseInt(searchParams.get("offset") || "0");
+
+    const polls = await db.getPolls(limit, offset);
+
+    return NextResponse.json(
+      {
+        success: true,
+        polls,
+        pagination: {
+          limit,
+          offset,
+          hasMore: polls.length === limit,
+        },
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    console.error("Error fetching polls:", error);
+
+    return NextResponse.json(
+      { error: "Failed to fetch polls" },
+      { status: 500 },
+    );
   }
 }
