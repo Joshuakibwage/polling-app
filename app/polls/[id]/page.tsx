@@ -1,10 +1,16 @@
-import { notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
-import { db } from '@/lib/database';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Calendar, User, Eye, MessageSquare } from 'lucide-react';
+import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { db } from "@/lib/database";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar, User, Eye, MessageSquare } from "lucide-react";
 
 interface PollPageProps {
   params: {
@@ -14,7 +20,9 @@ interface PollPageProps {
 
 export default async function PollPage({ params }: PollPageProps) {
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const poll = await db.getPoll(params.id);
 
@@ -23,12 +31,12 @@ export default async function PollPage({ params }: PollPageProps) {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -80,18 +88,20 @@ export default async function PollPage({ params }: PollPageProps) {
               Poll Options
             </CardTitle>
             <CardDescription>
-              {poll.allow_multiple_votes 
-                ? "You can vote for multiple options" 
-                : "Select one option to vote"
-              }
+              {poll.allow_multiple_votes
+                ? "You can vote for multiple options"
+                : "Select one option to vote"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {poll.options.map((option, index) => (
-                <div key={option.id} className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50">
+                <div
+                  key={option.id}
+                  className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50"
+                >
                   <div className="flex-1">
-                    <span className="font-medium">{option.option_text}</span>
+                    <span className="font-medium">{option.text}</span>
                   </div>
                   <Button variant="outline" size="sm">
                     Vote
@@ -126,8 +136,12 @@ export default async function PollPage({ params }: PollPageProps) {
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-medium">Voting:</span>
-                <Badge variant={poll.allow_multiple_votes ? "default" : "secondary"}>
-                  {poll.allow_multiple_votes ? "Multiple votes allowed" : "Single vote only"}
+                <Badge
+                  variant={poll.allow_multiple_votes ? "default" : "secondary"}
+                >
+                  {poll.allow_multiple_votes
+                    ? "Multiple votes allowed"
+                    : "Single vote only"}
                 </Badge>
               </div>
             </div>
